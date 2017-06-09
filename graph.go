@@ -18,6 +18,11 @@ type Edge interface {
 	Weight() float64
 }
 
+// MultiEdger adds support for multigraph
+type MultiEdger interface {
+	Edges() []Edge
+}
+
 // Graph is a generalized graph.
 type Graph interface {
 	// Has returns whether the node exists within the graph.
