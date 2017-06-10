@@ -119,7 +119,7 @@ func (g *DirectedGraph) SetEdge(e graph.Edge) {
 	}
 
 	g.from[fid][tid] = append(g.from[fid][tid], e)
-	g.to[tid][fid] = append(g.from[fid][tid], e)
+	g.to[tid][fid] = append(g.to[tid][fid], e)
 }
 
 // RemoveEdge removes e from the graph, leaving the terminal nodes. If the edge does not exist
