@@ -214,18 +214,20 @@ func (p *printer) print(g graph.Graph, name string, needsIndent, isSubgraph bool
 			}
 
 			for _, eg := range edges {
-				if isDirected {
-					if p.visited[edge{inGraph: name, from: n.ID(), to: t.ID()}] {
-						fmt.Printf("Visited %+v\n", eg)
-						continue
+				if !isMulti {
+					if isDirected {
+						if p.visited[edge{inGraph: name, from: n.ID(), to: t.ID()}] {
+							fmt.Printf("Visited %+v\n", eg)
+							continue
+						}
+						p.visited[edge{inGraph: name, from: n.ID(), to: t.ID()}] = true
+					} else {
+						if p.visited[edge{inGraph: name, from: n.ID(), to: t.ID()}] {
+							continue
+						}
+						p.visited[edge{inGraph: name, from: n.ID(), to: t.ID()}] = true
+						p.visited[edge{inGraph: name, from: t.ID(), to: n.ID()}] = true
 					}
-					p.visited[edge{inGraph: name, from: n.ID(), to: t.ID()}] = true
-				} else {
-					if p.visited[edge{inGraph: name, from: n.ID(), to: t.ID()}] {
-						continue
-					}
-					p.visited[edge{inGraph: name, from: n.ID(), to: t.ID()}] = true
-					p.visited[edge{inGraph: name, from: t.ID(), to: n.ID()}] = true
 				}
 
 				if !havePrintedEdgeHeader {
