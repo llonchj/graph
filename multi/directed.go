@@ -122,6 +122,15 @@ func (g *DirectedGraph) SetEdge(e graph.Edge) {
 	g.to[tid][fid] = append(g.to[tid][fid], e)
 }
 
+func removeIndex(s []graph.Edge, e graph.Edge) []graph.Edge {
+	for index, edge := range s {
+		if edge == e {
+			return append(s[:index], s[index+1:]...)
+		}
+	}
+	return s
+}
+
 // RemoveEdge removes e from the graph, leaving the terminal nodes. If the edge does not exist
 // it is a no-op.
 func (g *DirectedGraph) RemoveEdge(e graph.Edge) {
@@ -132,9 +141,11 @@ func (g *DirectedGraph) RemoveEdge(e graph.Edge) {
 	if _, ok := g.nodes[to.ID()]; !ok {
 		return
 	}
+	g.from[from.ID()][to.ID()] = removeIndex(g.from[from.ID()][to.ID()], e)
+	g.to[to.ID()][from.ID()] = removeIndex(g.to[to.ID()][from.ID()], e)
 
-	delete(g.from[from.ID()], to.ID())
-	delete(g.to[to.ID()], from.ID())
+	// delete(g.from[from.ID()][to.ID()], to.ID())
+	// delete(g.to[to.ID()][from.ID()], from.ID())
 }
 
 // Node returns the node in the graph with the given ID.
