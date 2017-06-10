@@ -204,68 +204,82 @@ func (p *printer) print(g graph.Graph, name string, needsIndent, isSubgraph bool
 		to := g.From(n)
 		sort.Sort(ordered.ByID(to))
 		for _, t := range to {
-			if isDirected {
-				if p.visited[edge{inGraph: name, from: n.ID(), to: t.ID()}] {
-					continue
-				}
-				p.visited[edge{inGraph: name, from: n.ID(), to: t.ID()}] = true
+
+			edges := []graph.Edge{}
+			me, isMulti := g.Edge(n, t).(graph.MultiEdger)
+			if isMulti {
+				edges = me.Edges()
 			} else {
-				if p.visited[edge{inGraph: name, from: n.ID(), to: t.ID()}] {
-					continue
-				}
-				p.visited[edge{inGraph: name, from: n.ID(), to: t.ID()}] = true
-				p.visited[edge{inGraph: name, from: t.ID(), to: n.ID()}] = true
+				edges = append(edges, g.Edge(n, t))
 			}
 
-			if !havePrintedEdgeHeader {
-				p.buf.WriteByte('\n')
-				p.buf.WriteString(strings.TrimRight(p.prefix, " \t\n")) // Trim whitespace suffix.
+			for _, eg := range edges {
+				if isDirected {
+					if p.visited[edge{inGraph: name, from: n.ID(), to: t.ID()}] {
+						fmt.Printf("Visited %+v\n", eg)
+						continue
+					}
+					p.visited[edge{inGraph: name, from: n.ID(), to: t.ID()}] = true
+				} else {
+					if p.visited[edge{inGraph: name, from: n.ID(), to: t.ID()}] {
+						continue
+					}
+					p.visited[edge{inGraph: name, from: n.ID(), to: t.ID()}] = true
+					p.visited[edge{inGraph: name, from: t.ID(), to: n.ID()}] = true
+				}
+
+				if !havePrintedEdgeHeader {
+					p.buf.WriteByte('\n')
+					p.buf.WriteString(strings.TrimRight(p.prefix, " \t\n")) // Trim whitespace suffix.
+					p.newline()
+					p.buf.WriteString("// Edge definitions.")
+					havePrintedEdgeHeader = true
+				}
+
 				p.newline()
-				p.buf.WriteString("// Edge definitions.")
-				havePrintedEdgeHeader = true
-			}
-			p.newline()
 
-			if s, ok := n.(Subgrapher); ok {
-				g := s.Subgraph()
-				_, subIsDirected := g.(graph.Directed)
-				if subIsDirected != isDirected {
-					return errors.New("dot: mismatched graph type")
+				if s, ok := n.(Subgrapher); ok {
+					g := s.Subgraph()
+					_, subIsDirected := g.(graph.Directed)
+					if subIsDirected != isDirected {
+						return errors.New("dot: mismatched graph type")
+					}
+					p.print(g, graphID(g, n), false, true)
+				} else {
+					p.writeNode(n)
 				}
-				p.print(g, graphID(g, n), false, true)
-			} else {
-				p.writeNode(n)
-			}
-			e, edgeIsPorter := g.Edge(n, t).(Porter)
-			if edgeIsPorter {
-				p.writePorts(e.FromPort())
-			}
 
-			if isDirected {
-				p.buf.WriteString(" -> ")
-			} else {
-				p.buf.WriteString(" -- ")
-			}
-
-			if s, ok := t.(Subgrapher); ok {
-				g := s.Subgraph()
-				_, subIsDirected := g.(graph.Directed)
-				if subIsDirected != isDirected {
-					return errors.New("dot: mismatched graph type")
+				e, edgeIsPorter := eg.(Porter)
+				if edgeIsPorter {
+					p.writePorts(e.FromPort())
 				}
-				p.print(g, graphID(g, t), false, true)
-			} else {
-				p.writeNode(t)
-			}
-			if edgeIsPorter {
-				p.writePorts(e.ToPort())
-			}
 
-			if a, ok := g.Edge(n, t).(Attributer); ok {
-				p.writeAttributeList(a)
-			}
+				if isDirected {
+					p.buf.WriteString(" -> ")
+				} else {
+					p.buf.WriteString(" -- ")
+				}
 
-			p.buf.WriteByte(';')
+				if s, ok := t.(Subgrapher); ok {
+					g := s.Subgraph()
+					_, subIsDirected := g.(graph.Directed)
+					if subIsDirected != isDirected {
+						return errors.New("dot: mismatched graph type")
+					}
+					p.print(g, graphID(g, t), false, true)
+				} else {
+					p.writeNode(t)
+				}
+				if edgeIsPorter {
+					p.writePorts(e.ToPort())
+				}
+
+				if a, ok := eg.(Attributer); ok {
+					p.writeAttributeList(a)
+				}
+
+				p.buf.WriteByte(';')
+			}
 		}
 	}
 	p.closeBlock("}")
